@@ -1,0 +1,31 @@
+.flow-node-add{
+    position: fixed;
+    z-index: 1000;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flow-node-add__container{
+    position: relative;
+    width: 250px;
+    height: 100px;
+    background-color: white;
+    border-radius: 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    box-sizing: border-box;
+    justify-content: space-between;
+}
+
+.flow-node-add__close{
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    cursor: pointer;
+}
