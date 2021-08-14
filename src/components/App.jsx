@@ -1,3 +1,4 @@
+import { map } from 'lodash';
 import React, { useState } from 'react';
 import ReactFlow from 'react-flow-renderer';
 import '../styles/App.css';
@@ -26,17 +27,20 @@ const App = () => {
                 title,
                 layer: 1,
                 parent: 0,
+                childrens: 0
             };
             setNodes([{...newNode}]);
         } else {
             const findedNode = nodes.find(item => item.id === prevNodeId);
             const idx = (+nodes[nodes.length - 1].id + 1).toString();
+            findedNode.childrens += 1;
             const newNode = {
                 id: idx,
                 text,
                 title,
                 layer: findedNode.layer + 1,
-                parent: +prevNodeId
+                parent: +prevNodeId,
+                childrens: 0
             };
             const newEdge = {
                 id: `e${prevNodeId}-${idx}`,
@@ -48,44 +52,75 @@ const App = () => {
         }
     }
     const nodeContent = () => {
-        const layers = new Map();
-        nodes.map(({layer}) => {
-            if(!layers.get(layer)){
-                layers.set(layer, 1);
+        const layers = [];
+        nodes.map(({layer, childrens}) => {
+            const findedLayer = layers.find(({key}) => key === layer);
+            if(!findedLayer){
+                layers.push({
+                    key: layer,
+                    value: 1,
+                    maxChildrens: childrens,
+                    nodeWidth: 180
+                });
             } else {
-                layers.set(layer, layers.get(layer) + 1)
+                findedLayer.value += 1;
+                if(childrens > findedLayer.maxChildrens){
+                    findedLayer.maxChildrens = childrens;
+                }
+            }
+        });
+        (layers.reverse()).map((layer) => {
+            const prevLayer = layers.find(prevLayer => prevLayer.key === layer.key - 1)
+            if(prevLayer){
+                prevLayer.nodeWidth = layer.nodeWidth * prevLayer.maxChildrens
             }
         });
         const result = [];
         let prevParent = [];
-        for (const entry of layers.entries()) {
-            let x = 0;
-            const findedNodes = nodes.filter(item => item.layer === entry[0]);
-            if(entry[0] === 1){
+        for (const layer of layers.reverse()) {
+            const findedNodes = nodes.filter(item => item.layer === layer.key);
+            if(findedNodes[0].layer === 1){
                 result.push({
                     id: findedNodes[0].id,
                     data: {label: <span><strong>{findedNodes[0].title}</strong><br/>{findedNodes[0].text}</span>},
-                    position: {x: 200 * 1 , y: 100 * findedNodes[0].layer},
+                    position: {x: (layer.nodeWidth) / 2 , y: 100 * findedNodes[0].layer},
                     draggable: false,
                     style: {
-                        opacity: 1
+                        opacity: 1,
+                        backgroundColor: 'green'
                     }
                 });
-                prevParent = [1];
+                prevParent = [{
+                    id: 1,
+                    positionBegin: 0,
+                    positionEnd: layer.nodeWidth
+                }];
             } else {
-                const e = prevParent.map(i => findedNodes.filter(item => item.parent == i));
+                const currentParent = [...prevParent]
+                const e = currentParent.map(({id}) => findedNodes.filter(item => item.parent == id));
                 prevParent = [];
-                (e.flat()).map(item => {
-                    prevParent.push(item.id)
-                    result.push(
-                        {
+                e.map((items, idx) => {
+                    let x1 = currentParent[idx].positionBegin;
+                    let x2 = currentParent[idx].positionEnd;
+                    items.map((item, idx) => {
+                        prevParent.push({
                             id: item.id,
-                            data: {label: <span><strong>{item.title}</strong><br/>{item.text}</span>},
-                            position: {x , y: 100 * item.layer},
-                            draggable: false
-                        }
-                    );
-                    x += 200
+                            positionBegin: x1,
+                            positionEnd: x2
+                        });
+                        result.push(
+                            {
+                                id: item.id,
+                                data: {label: <span><strong>{item.title}</strong><br/>{item.text}</span>},
+                                position: {x: (x1 + (layer.nodeWidth / 2)) , y: 100 * item.layer},
+                                draggable: false,
+                                style: item.childrens === 0 ? { backgroundColor: 'red' } : { backgroundColor: 'blue' }
+                            }
+                        );
+                        x1 += layer.nodeWidth;
+                        x2 += layer.nodeWidth;
+                    });
+                    
                 });
             }
         }
